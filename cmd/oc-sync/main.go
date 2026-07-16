@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/dagimg-dot/oc-sync/internal/cli"
 	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
@@ -92,6 +93,9 @@ func run() error {
 		return cmdSync()
 	case "status":
 		return cmdStatus()
+	case "version":
+		fmt.Printf("oc-sync %s (commit %s, built %s)\n", cli.Version(), cli.Commit(), cli.BuildDate())
+		return nil
 	default:
 		return fmt.Errorf("unknown command: %s — run 'oc-sync help' for usage", os.Args[1])
 	}
