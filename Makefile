@@ -5,6 +5,8 @@ CMD_PATH=./cmd/oc-sync
 GOFLAGS ?=
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
+PREFIX ?= $(HOME)/.local
+DESTDIR ?=
 
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -56,8 +58,10 @@ test-v:
 vet:
 	$(GO) vet ./...
 
-install:
-	$(GO) install $(GOFLAGS) -ldflags="$(LDFLAGS)" $(CMD_PATH)
+install: build
+	@echo "Installing $(BINARY_NAME) to $(DESTDIR)$(PREFIX)/bin..."
+	@mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp $(BINARY_PATH) $(DESTDIR)$(PREFIX)/bin/$(BINARY_NAME)
 
 coverage:
 	$(GO) test -coverprofile=coverage.out ./...

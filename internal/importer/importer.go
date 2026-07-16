@@ -57,8 +57,13 @@ func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 		}
 	}
 
+	var todoHasID bool
+	todoHasID, err = hasTodoIDColumn(tx)
+	if err != nil {
+		return fmt.Errorf("check todo schema: %w", err)
+	}
 	for i := range exp.Todos {
-		if err := insertTodo(tx, &exp.Todos[i]); err != nil {
+		if err := insertTodo(tx, &exp.Todos[i], todoHasID); err != nil {
 			return fmt.Errorf("todo: %w", err)
 		}
 	}
@@ -119,11 +124,39 @@ func insertPart(tx *sql.Tx, p *types.Part) error {
 	return err
 }
 
-func insertTodo(tx *sql.Tx, t *types.Todo) error {
+func hasTodoIDColumn(tx *sql.Tx) (bool, error) {
+	rows, err := tx.QueryContext(context.Background(), "PRAGMA table_info(todo)")
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dfltValue *string
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			return false, err
+		}
+		if name == "id" {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+func insertTodo(tx *sql.Tx, t *types.Todo, hasID bool) error {
+	if hasID {
+		_, err := tx.ExecContext(context.Background(), `
+			INSERT OR IGNORE INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, t.ID, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
+		return err
+	}
 	_, err := tx.ExecContext(context.Background(), `
-		INSERT OR IGNORE INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, t.ID, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
+		INSERT OR IGNORE INTO todo (session_id, content, status, priority, position, time_created, time_updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
 	return err
 }
 
