@@ -2,20 +2,20 @@ package types
 
 // Session represents a single OpenCode session for export/import.
 type Session struct {
-	ID          string `json:"id"`
-	ProjectID   string `json:"project_id"`
-	ParentID    string `json:"parent_id,omitempty"`
-	Slug        string `json:"slug"`
-	Directory   string `json:"directory"`
-	Path        string `json:"path,omitempty"`
-	Title       string `json:"title"`
-	Agent       string `json:"agent,omitempty"`
-	Model       string `json:"model,omitempty"`
-	Cost        float64 `json:"cost"`
-	TokensInput int64   `json:"tokens_input"`
-	TokensOutput int64  `json:"tokens_output"`
-	TimeCreated int64   `json:"time_created"`
-	TimeUpdated int64   `json:"time_updated"`
+	ID           string  `json:"id"`
+	ProjectID    string  `json:"project_id"`
+	ParentID     string  `json:"parent_id,omitempty"`
+	Slug         string  `json:"slug"`
+	Directory    string  `json:"directory"`
+	Path         string  `json:"path,omitempty"`
+	Title        string  `json:"title"`
+	Agent        string  `json:"agent,omitempty"`
+	Model        string  `json:"model,omitempty"`
+	Cost         float64 `json:"cost"`
+	TokensInput  int64   `json:"tokens_input"`
+	TokensOutput int64   `json:"tokens_output"`
+	TimeCreated  int64   `json:"time_created"`
+	TimeUpdated  int64   `json:"time_updated"`
 }
 
 // Message is a single conversation turn within a session.

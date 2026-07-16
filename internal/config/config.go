@@ -27,8 +27,8 @@ type Config struct {
 func Defaults() *Config {
 	hostname, _ := os.Hostname()
 	return &Config{
-		DBPath:  expandPath("~/.local/share/opencode/opencode.db"),
-		SyncDir: expandPath("~/Sync/oc-sync"),
+		DBPath:   expandPath("~/.local/share/opencode/opencode.db"),
+		SyncDir:  expandPath("~/Sync/oc-sync"),
 		Hostname: hostname,
 	}
 }
@@ -43,7 +43,7 @@ func ConfigPath() string {
 
 // Load reads config from disk, falling back to defaults.
 func Load() (*Config, error) {
-		return Defaults(), nil
+	return Defaults(), nil
 }
 
 func Save(cfg *Config) error {
