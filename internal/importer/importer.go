@@ -37,8 +37,11 @@ func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 		exp.Session.ProjectID = mapping.LocalProjectID
 		exp.Project.ID = mapping.LocalProjectID
 		exp.Project.Worktree = mapping.LocalWorktree
-	} else if err := insertProject(tx, &exp.Project); err != nil {
-		return fmt.Errorf("project: %w", err)
+	} else {
+		if err := insertProject(tx, &exp.Project); err != nil {
+			return fmt.Errorf("project: %w", err)
+		}
+		exp.Session.ProjectID = "global"
 	}
 
 	if err := insertSession(tx, &exp.Session); err != nil {

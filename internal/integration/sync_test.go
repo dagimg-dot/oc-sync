@@ -86,11 +86,11 @@ var seedA = []string{
 	`INSERT INTO project (id, worktree, vcs, name, time_created, time_updated, sandboxes)
 	 VALUES ('proj_aaa', '/home/jd/JDrive/Projects/GO/oc-sync', 'git', 'oc-sync', 1000, 1000, '[]')`,
 	`INSERT INTO project (id, worktree, vcs, name, time_created, time_updated, sandboxes)
-	 VALUES ('proj_global', '/', '', 'global', 1000, 1000, '[]')`,
+	 VALUES ('global', '/', '', 'global', 1000, 1000, '[]')`,
 	`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated, agent, model, tokens_input, tokens_output)
 	 VALUES ('ses_aaa', 'proj_aaa', 'fix-parser', '/home/jd/JDrive/Projects/GO/oc-sync', 'Fix parser bug', '1', 1000, 1500, 'opencode', 'gpt4', 500, 200)`,
 	`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated, agent, model, tokens_input, tokens_output)
-	 VALUES ('ses_bbb', 'proj_global', 'notes', '/', 'Random notes', '1', 1100, 1200, 'opencode', 'gpt4', 100, 50)`,
+	 VALUES ('ses_bbb', 'global', 'notes', '/', 'Random notes', '1', 1100, 1200, 'opencode', 'gpt4', 100, 50)`,
 	`INSERT INTO message (id, session_id, time_created, time_updated, data)
 	 VALUES ('msg_a1', 'ses_aaa', 1000, 1000, '{"role":"user","summary":{"diffs":[]}}')`,
 	`INSERT INTO message (id, session_id, time_created, time_updated, data)
@@ -111,7 +111,7 @@ var seedB = []string{
 	`INSERT INTO project (id, worktree, vcs, name, time_created, time_updated, sandboxes)
 	 VALUES ('proj_bbb', '/home/jd/Work/oc-sync', 'git', 'oc-sync', 2000, 2000, '[]')`,
 	`INSERT INTO project (id, worktree, vcs, name, time_created, time_updated, sandboxes)
-	 VALUES ('proj_global', '/', '', 'global', 2000, 2000, '[]')`,
+	 VALUES ('global', '/', '', 'global', 2000, 2000, '[]')`,
 }
 
 func setupDB(t *testing.T, seeds []string) *sql.DB {
@@ -255,7 +255,7 @@ func TestImport_idempotent(t *testing.T) {
 }
 
 func TestImport_globalSession(t *testing.T) {
-	// Global sessions (project_id = proj_global) don't need path mapping
+	// Global sessions (project_id = global) don't need path mapping
 	exportDir := tempDir(t)
 	dbA := setupDB(t, seedA)
 	dbB := setupDB(t, seedB)
