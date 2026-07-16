@@ -58,7 +58,7 @@ func run() error {
 	case "status":
 		return cmdStatus()
 	default:
-		return fmt.Errorf("unknown command: %s\nRun 'oc-sync help' for usage", os.Args[1])
+		return fmt.Errorf("unknown command: %s — run 'oc-sync help' for usage", os.Args[1])
 	}
 }
 
@@ -128,11 +128,17 @@ func cmdExport(args []string) error {
 	defer db.Close()
 
 	syncDir := filepath.Join(cfg.SyncDir, cfg.Hostname)
+	var failed int
 	for _, id := range args {
 		if err := export.Session(db, id, syncDir); err != nil {
-			return fmt.Errorf("export %s: %w", id, err)
+			fmt.Fprintf(os.Stderr, "warning: export %s: %v\n", id, err)
+			failed++
+			continue
 		}
 		fmt.Fprintf(os.Stderr, "exported %s\n", id)
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d export(s) failed", failed)
 	}
 	return nil
 }
