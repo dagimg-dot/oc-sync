@@ -1,5 +1,5 @@
 # Binaries
-oc-sync
+bin/oc-sync
 oc-sync-*
 *.exe
 *.exe~
