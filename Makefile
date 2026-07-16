@@ -15,7 +15,7 @@ LDFLAGS := -s -w \
 	-X github.com/dagimg-dot/oc-sync/internal/cli.commit=$(COMMIT) \
 	-X github.com/dagimg-dot/oc-sync/internal/cli.buildDate=$(BUILD_DATE)
 
-.PHONY: all build clean fmt check-fmt lint lint-fix test test-v
+.PHONY: all build clean fmt check-fmt lint lint-fix test test-v vet install coverage
 
 all: fmt build
 
@@ -53,9 +53,19 @@ test:
 test-v:
 	$(GO) test -v ./... $(GOFLAGS)
 
+vet:
+	$(GO) vet ./...
+
+install:
+	$(GO) install $(GOFLAGS) -ldflags="$(LDFLAGS)" $(CMD_PATH)
+
+coverage:
+	$(GO) test -coverprofile=coverage.out ./...
+	$(GO) tool cover -html=coverage.out -o coverage.html
+
 clean:
 	@echo "Cleaning..."
-	@rm -rf bin/
+	@rm -rf bin/ coverage.out coverage.html
 
 tidy:
 	$(GO) mod tidy

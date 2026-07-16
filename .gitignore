@@ -26,3 +26,17 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage.out
+coverage.html
+
+# Environment
+.env
+.env.*
+
+# Agent artifacts
+.sisyphus/
+
+# Logs
+*.log
