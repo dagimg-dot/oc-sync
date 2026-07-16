@@ -51,12 +51,15 @@ func cmdSync() error {
 		return fmt.Errorf("list sessions: %w", err)
 	}
 	for _, s := range sessions {
-		p := filepath.Join(myDir, s.ID+".json")
+		p := filepath.Join(myDir, sync.SessionFileName(s.ID))
 		if _, err := os.Stat(p); os.IsNotExist(err) {
-			if err := export.Session(dbRO, s.ID, myDir); err != nil {
-				return fmt.Errorf("export %s: %w", s.ID, err)
+			old := filepath.Join(myDir, s.ID+sync.ExtOld)
+			if _, err := os.Stat(old); os.IsNotExist(err) {
+				if err := export.Session(dbRO, s.ID, myDir); err != nil {
+					return fmt.Errorf("export %s: %w", s.ID, err)
+				}
+				exported++
 			}
-			exported++
 		}
 	}
 

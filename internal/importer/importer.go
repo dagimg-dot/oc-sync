@@ -5,20 +5,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os"
 
+	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
 func Session(db *sql.DB, src string, mappings []types.Mapping) error {
-	f, err := os.Open(src)
+	r, err := sync.OpenSessionFile(src)
 	if err != nil {
 		return fmt.Errorf("open export: %w", err)
 	}
-	defer f.Close()
+	defer r.Close()
 
 	var exp types.SessionExport
-	if err := json.NewDecoder(f).Decode(&exp); err != nil {
+	if err := json.NewDecoder(r).Decode(&exp); err != nil {
 		return fmt.Errorf("decode export: %w", err)
 	}
 

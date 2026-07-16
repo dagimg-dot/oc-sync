@@ -1,6 +1,7 @@
 package export
 
 import (
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
@@ -70,21 +72,25 @@ func writeExport(syncDir string, exp *types.SessionExport) error {
 		return fmt.Errorf("create sync dir: %w", err)
 	}
 
-	path := filepath.Join(syncDir, exp.Session.ID+".json")
+	path := filepath.Join(syncDir, sync.SessionFileName(exp.Session.ID))
 	tmpPath := path + ".tmp"
 
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
+	defer f.Close()
 
-	enc := json.NewEncoder(f)
+	gw := gzip.NewWriter(f)
+	defer gw.Close()
+
+	enc := json.NewEncoder(gw)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(exp); err != nil {
-		f.Close()
 		os.Remove(tmpPath)
 		return fmt.Errorf("encode json: %w", err)
 	}
+	gw.Close()
 	f.Close()
 
 	if err := os.Rename(tmpPath, path); err != nil {

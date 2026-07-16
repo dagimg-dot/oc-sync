@@ -8,6 +8,7 @@ import (
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/db"
+	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/spf13/cobra"
 )
@@ -48,20 +49,30 @@ func cmdStatus() error {
 	}
 	fmt.Fprintf(os.Stderr, "pending:  %d session(s) to export\n", pendingExports)
 
+	configDir := filepath.Dir(config.ConfigPath())
+	tracker, err := importer.NewTracker(configDir)
+	if err != nil {
+		return fmt.Errorf("tracker: %w", err)
+	}
+
 	files, err := sync.PeerFiles(cfg.SyncDir, cfg.Hostname)
 	if err != nil || len(files) == 0 {
 		fmt.Fprintln(os.Stderr, "peers:    (none)")
 	} else {
 		peers := map[string]int{}
+		pending := 0
 		for _, f := range files {
 			peers[f.Machine]++
+			if !tracker.IsImported(f.Machine, f.Path) {
+				pending++
+			}
 		}
 		var names []string
 		for name := range peers {
 			names = append(names, name)
 		}
 		fmt.Fprintf(os.Stderr, "peers:    %s\n", strings.Join(names, ", "))
-		fmt.Fprintf(os.Stderr, "pending:  %d session(s) to import\n", len(files))
+		fmt.Fprintf(os.Stderr, "pending:  %d session(s) to import\n", pending)
 	}
 
 	if len(cfg.Mappings) > 0 {

@@ -1,6 +1,7 @@
 package export
 
 import (
+	"compress/gzip"
 	"database/sql"
 	"encoding/json"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
@@ -111,14 +113,16 @@ func TestWriteExport(t *testing.T) {
 		t.Fatalf("writeExport: %v", err)
 	}
 
-	path := filepath.Join(dir, "ses_test.json")
+	path := filepath.Join(dir, sync.SessionFileName("ses_test"))
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Fatal("export file not created")
 	}
 
-	data, _ := os.ReadFile(path)
+	f, _ := os.Open(path)
+	defer f.Close()
+	gr, _ := gzip.NewReader(f)
 	var decoded types.SessionExport
-	if err := json.Unmarshal(data, &decoded); err != nil {
+	if err := json.NewDecoder(gr).Decode(&decoded); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
 	if decoded.Session.ID != "ses_test" {

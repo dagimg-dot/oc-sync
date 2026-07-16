@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type PeerFile struct {
@@ -29,7 +28,7 @@ func PeerFiles(syncDir, ownHostname string) ([]PeerFile, error) {
 			continue
 		}
 		for _, f := range dirEntries {
-			if f.IsDir() || !strings.HasSuffix(f.Name(), ".json") {
+			if f.IsDir() || !IsSessionFile(f.Name()) {
 				continue
 			}
 			files = append(files, PeerFile{
@@ -52,9 +51,13 @@ func PendingExports(db *sql.DB, myDir string) (int, error) {
 	for rows.Next() {
 		var id string
 		rows.Scan(&id)
-		p := filepath.Join(myDir, id+".json")
+		p := filepath.Join(myDir, SessionFileName(id))
 		if _, err := os.Stat(p); os.IsNotExist(err) {
-			count++
+			// check old format for backward compat
+			old := filepath.Join(myDir, id+ExtOld)
+			if _, err := os.Stat(old); os.IsNotExist(err) {
+				count++
+			}
 		}
 	}
 	return count, rows.Err()

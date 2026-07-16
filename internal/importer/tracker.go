@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
+	ocsync "github.com/dagimg-dot/oc-sync/internal/sync"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,11 +23,6 @@ type Tracker struct {
 	mu       sync.Mutex
 	path     string
 	Imported map[string]peerState `yaml:"imported"` // hostname → session_id → info
-}
-
-func sessionID(path string) string {
-	base := filepath.Base(path)
-	return strings.TrimSuffix(base, ".json")
 }
 
 func NewTracker(configDir string) (*Tracker, error) {
@@ -55,7 +50,7 @@ func NewTracker(configDir string) (*Tracker, error) {
 }
 
 func (t *Tracker) IsImported(peerHostname, path string) bool {
-	id := sessionID(path)
+	id := ocsync.SessionID(path)
 	info, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -76,7 +71,7 @@ func (t *Tracker) IsImported(peerHostname, path string) bool {
 }
 
 func (t *Tracker) MarkImported(peerHostname, path string) {
-	id := sessionID(path)
+	id := ocsync.SessionID(path)
 	info, err := os.Stat(path)
 	if err != nil {
 		return

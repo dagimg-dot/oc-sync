@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"compress/gzip"
 	"database/sql"
 	"encoding/json"
 	"os"
@@ -166,7 +167,7 @@ func TestExportSession(t *testing.T) {
 		t.Fatalf("export session: %v", err)
 	}
 
-	exportPath := filepath.Join(syncDir, "ses_aaa.json")
+	exportPath := filepath.Join(syncDir, "ses_aaa.json.gz")
 	if _, err := os.Stat(exportPath); os.IsNotExist(err) {
 		t.Fatalf("export file not found: %s", exportPath)
 	}
@@ -180,7 +181,7 @@ func TestExportSession_selectsOnlyRequested(t *testing.T) {
 		t.Fatalf("export session: %v", err)
 	}
 
-	exportPath := filepath.Join(syncDir, "ses_bbb.json")
+	exportPath := filepath.Join(syncDir, "ses_bbb.json.gz")
 	if _, err := os.Stat(exportPath); !os.IsNotExist(err) {
 		t.Errorf("unwanted export file exists: %s", exportPath)
 	}
@@ -196,7 +197,7 @@ func TestImportSession(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	err := importer.Session(dbB, importPath, nil)
 	if err != nil {
 		t.Fatalf("import: %v", err)
@@ -236,7 +237,7 @@ func TestImport_idempotent(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("first import: %v", err)
 	}
@@ -263,7 +264,7 @@ func TestImport_globalSession(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_bbb.json")
+	importPath := filepath.Join(exportDir, "ses_bbb.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import global session: %v", err)
 	}
@@ -298,7 +299,7 @@ func TestImport_divergentMerge(t *testing.T) {
 	}
 
 	// Import into B — B should end up with both A's and B's messages
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import: %v", err)
 	}
@@ -338,7 +339,7 @@ func TestImport_withProjectMapping(t *testing.T) {
 		LocalWorktree:   "/home/jd/Work/oc-sync",
 	}}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, mappings); err != nil {
 		t.Fatalf("import with mapping: %v", err)
 	}
@@ -386,7 +387,7 @@ func TestImport_todoMerge(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import: %v", err)
 	}
@@ -427,7 +428,7 @@ func TestImport_withTodos(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import: %v", err)
 	}
@@ -472,7 +473,7 @@ func TestSync_roundTrip(t *testing.T) {
 		t.Fatalf("A export: %v", err)
 	}
 
-	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	importPath := filepath.Join(exportDir, "ses_aaa.json.gz")
 	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("B import: %v", err)
 	}
@@ -486,7 +487,7 @@ func TestSync_roundTrip(t *testing.T) {
 		t.Fatalf("B export: %v", err)
 	}
 
-	importPath2 := filepath.Join(exportDir2, "ses_aaa.json")
+	importPath2 := filepath.Join(exportDir2, "ses_aaa.json.gz")
 	if err := importer.Session(dbA, importPath2, nil); err != nil {
 		t.Fatalf("A re-import: %v", err)
 	}
@@ -508,13 +509,16 @@ func TestExport_exportFileContent(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "ses_aaa.json"))
+	f, err := os.Open(filepath.Join(dir, "ses_aaa.json.gz"))
 	if err != nil {
 		t.Fatalf("read export: %v", err)
 	}
+	defer f.Close()
+	gr, _ := gzip.NewReader(f)
+	defer gr.Close()
 
 	var exp types.SessionExport
-	if err := json.Unmarshal(data, &exp); err != nil {
+	if err := json.NewDecoder(gr).Decode(&exp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
 
