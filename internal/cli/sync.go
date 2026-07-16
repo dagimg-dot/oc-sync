@@ -60,16 +60,30 @@ func cmdSync() error {
 		}
 	}
 
+	configDir := filepath.Dir(config.ConfigPath())
+	tracker, err := importer.NewTracker(configDir)
+	if err != nil {
+		return fmt.Errorf("tracker: %w", err)
+	}
+
 	imported := 0
 	files, err := sync.PeerFiles(cfg.SyncDir, cfg.Hostname)
 	if err == nil {
 		for _, f := range files {
+			if tracker.IsImported(f.Machine, f.Path) {
+				continue
+			}
 			if err := importer.Session(dbRW, f.Path, cfg.Mappings); err != nil {
 				fmt.Fprintf(os.Stderr, "warning: import %s: %v\n", f.Path, err)
 				continue
 			}
+			tracker.MarkImported(f.Machine, f.Path)
 			imported++
 		}
+	}
+
+	if err := tracker.Save(); err != nil {
+		return fmt.Errorf("save tracker: %w", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "exported %d, imported %d\n", exported, imported)
