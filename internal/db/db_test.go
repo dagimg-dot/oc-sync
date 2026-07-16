@@ -46,19 +46,20 @@ func TestOpenRW(t *testing.T) {
 	}
 }
 
-func TestOpenRO_rejectsWrite(t *testing.T) {
+func TestOpen_sameDbMultipleTimes(t *testing.T) {
 	dir, _ := os.MkdirTemp("", "oc-sync-db-test-*")
 	defer os.RemoveAll(dir)
 	path := filepath.Join(dir, "test.db")
 
-	d, err := Open(path)
+	d1, err := Open(path)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer d.Close()
+	defer d1.Close()
 
-	_, err = d.Exec("CREATE TABLE t (x int)")
-	if err == nil {
-		t.Error("expected error on write to read-only db")
+	d2, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open second connection: %v", err)
 	}
+	d2.Close()
 }

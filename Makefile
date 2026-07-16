@@ -22,7 +22,7 @@ all: fmt build
 build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p bin
-	CGO_ENABLED=1 $(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_PATH) $(CMD_PATH)
+	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_PATH) $(CMD_PATH)
 
 run:
 	@echo "Running $(BINARY_NAME)..."

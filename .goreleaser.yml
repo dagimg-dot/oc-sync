@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+version: 2
+project_name: oc-sync
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: oc-sync
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/dagimg-dot/oc-sync/internal/cli.version={{.Version}} -X github.com/dagimg-dot/oc-sync/internal/cli.commit={{.Commit}} -X github.com/dagimg-dot/oc-sync/internal/cli.buildDate={{.Date}}
+    main: ./cmd/oc-sync
+    binary: oc-sync
+
+archives:
+  - id: oc-sync
+    ids: [oc-sync]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: dagimg-dot
+    name: oc-sync
