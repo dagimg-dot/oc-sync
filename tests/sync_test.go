@@ -9,6 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/dagimg-dot/oc-sync/internal/export"
+	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/list"
 )
 
@@ -40,6 +41,9 @@ CREATE TABLE IF NOT EXISTS session (
 	cost REAL DEFAULT 0 NOT NULL,
 	tokens_input INTEGER DEFAULT 0 NOT NULL,
 	tokens_output INTEGER DEFAULT 0 NOT NULL,
+	tokens_reasoning INTEGER DEFAULT 0 NOT NULL,
+	tokens_cache_read INTEGER DEFAULT 0 NOT NULL,
+	tokens_cache_write INTEGER DEFAULT 0 NOT NULL,
 	FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 );
 
@@ -191,7 +195,7 @@ func TestImportSession(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	err := importSession(dbB, importPath)
+	err := importer.Session(dbB, importPath)
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
@@ -231,10 +235,10 @@ func TestImport_idempotent(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importSession(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath); err != nil {
 		t.Fatalf("first import: %v", err)
 	}
-	if err := importSession(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath); err != nil {
 		t.Fatalf("second import: %v", err)
 	}
 
@@ -258,7 +262,7 @@ func TestImport_globalSession(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_bbb.json")
-	if err := importSession(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath); err != nil {
 		t.Fatalf("import global session: %v", err)
 	}
 
@@ -293,7 +297,7 @@ func TestImport_divergentMerge(t *testing.T) {
 
 	// Import into B — B should end up with both A's and B's messages
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importSession(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath); err != nil {
 		t.Fatalf("import: %v", err)
 	}
 
@@ -329,7 +333,7 @@ func TestImport_withTodos(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importSession(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath); err != nil {
 		t.Fatalf("import: %v", err)
 	}
 
@@ -340,8 +344,4 @@ func TestImport_withTodos(t *testing.T) {
 	if todoCount != 1 {
 		t.Errorf("want 1 todo, got %d", todoCount)
 	}
-}
-
-func importSession(db *sql.DB, src string) error {
-	return nil
 }

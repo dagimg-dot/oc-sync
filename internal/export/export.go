@@ -1,6 +1,7 @@
 package export
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
+
+var bg = context.Background()
 
 func Session(db *sql.DB, sessionID, syncDir string) error {
 	exp, err := buildExport(db, sessionID)
@@ -86,7 +89,7 @@ func writeExport(syncDir string, exp *types.SessionExport) error {
 
 func querySession(db *sql.DB, id string) (*types.Session, error) {
 	var s types.Session
-	err := db.QueryRow(`
+	err := db.QueryRowContext(bg, `
 		SELECT id, project_id, COALESCE(parent_id,''), slug, directory,
 		       COALESCE(path,''), title, COALESCE(agent,''), COALESCE(model,''),
 		       COALESCE(cost,0), COALESCE(tokens_input,0), COALESCE(tokens_output,0),
@@ -106,7 +109,7 @@ func querySession(db *sql.DB, id string) (*types.Session, error) {
 
 func queryProject(db *sql.DB, id string) (*types.Project, error) {
 	var p types.Project
-	err := db.QueryRow(`
+	err := db.QueryRowContext(bg, `
 		SELECT id, worktree, COALESCE(vcs,''), COALESCE(name,''),
 		       time_created, time_updated
 		FROM project WHERE id = ?
@@ -121,7 +124,7 @@ func queryProject(db *sql.DB, id string) (*types.Project, error) {
 }
 
 func queryMessages(db *sql.DB, sessionID string) ([]types.Message, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(bg, `
 		SELECT id, session_id, time_created, time_updated, data
 		FROM message WHERE session_id = ?
 		ORDER BY time_created, id
@@ -143,7 +146,7 @@ func queryMessages(db *sql.DB, sessionID string) ([]types.Message, error) {
 }
 
 func queryParts(db *sql.DB, sessionID string) ([]types.Part, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(bg, `
 		SELECT id, message_id, session_id, time_created, time_updated, data
 		FROM part WHERE session_id = ?
 		ORDER BY time_created, id
@@ -165,7 +168,7 @@ func queryParts(db *sql.DB, sessionID string) ([]types.Part, error) {
 }
 
 func queryTodos(db *sql.DB, sessionID string) ([]types.Todo, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(bg, `
 		SELECT session_id, content, status, priority, position,
 		       time_created, time_updated
 		FROM todo WHERE session_id = ?

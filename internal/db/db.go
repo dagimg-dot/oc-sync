@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -37,5 +36,3 @@ func OpenRW(path string) (*DB, error) {
 func (d *DB) RO() *sql.DB { return d.ro }
 
 func (d *DB) Close() error { return d.ro.Close() }
-
-var stmtGetSessionOnce sync.Once

@@ -1,14 +1,17 @@
 package list
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
+var bg = context.Background()
+
 func Sessions(db *sql.DB) ([]types.Session, error) {
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(bg, `
 		SELECT id, project_id, title, agent, model,
 		       time_created, time_updated,
 		       tokens_input, tokens_output
