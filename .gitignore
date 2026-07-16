@@ -1,4 +1,6 @@
 # Binaries
+oc-sync
+oc-sync-*
 *.exe
 *.exe~
 *.dll
