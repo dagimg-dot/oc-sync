@@ -18,7 +18,6 @@ type Session struct {
 	TimeUpdated  int64   `json:"time_updated"`
 }
 
-// Message is a single conversation turn within a session.
 type Message struct {
 	ID          string `json:"id"`
 	SessionID   string `json:"session_id"`
@@ -58,8 +57,10 @@ type Project struct {
 	TimeUpdated int64  `json:"time_updated"`
 }
 
-// SessionExport is the self-contained export format for a single session.
+const ExportVersion = 1
+
 type SessionExport struct {
+	Version  int       `json:"version"`
 	Session  Session   `json:"session"`
 	Project  Project   `json:"project"`
 	Messages []Message `json:"messages"`

@@ -25,6 +25,10 @@ func Session(db *sql.DB, src string, mappings []config.Mapping) error {
 		return fmt.Errorf("decode export: %w", err)
 	}
 
+	if exp.Version > types.ExportVersion {
+		return fmt.Errorf("export version %d is newer than supported version %d", exp.Version, types.ExportVersion)
+	}
+
 	tx, err := db.BeginTx(bg, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)

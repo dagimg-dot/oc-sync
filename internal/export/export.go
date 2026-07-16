@@ -57,6 +57,7 @@ func buildExport(db *sql.DB, sessionID string) (*types.SessionExport, error) {
 	hostname, _ := os.Hostname()
 
 	return &types.SessionExport{
+		Version:  types.ExportVersion,
 		Session:  *session,
 		Project:  *project,
 		Messages: messages,

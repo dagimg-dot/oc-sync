@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -23,6 +24,28 @@ func main() {
 	}
 }
 
+var helpText = map[string]string{
+	"list": `Usage: oc-sync list
+
+List sessions from the local database with title, project, token count, and
+last updated time.`,
+	"export": `Usage: oc-sync export <session-id...>
+
+Export one or more sessions by ID to the sync directory. Each session is
+written as a JSON file in <sync_dir>/<hostname>/<session-id>.json.`,
+	"import": `Usage: oc-sync import
+
+Import sessions from peer machine directories in the sync directory into the
+local database. Sessions already present (same ID) are skipped.`,
+	"sync": `Usage: oc-sync sync
+
+Bidirectional sync: export new local sessions not yet in the sync directory,
+then import foreign sessions from peer machines.`,
+	"status": `Usage: oc-sync status
+
+Show configuration, connected peers, and pending sync state.`,
+}
+
 func usage() {
 	fmt.Fprint(os.Stderr, `Usage: oc-sync <command> [options]
 
@@ -37,6 +60,18 @@ Run "oc-sync help <command>" for command-specific help.
 `)
 }
 
+func cmdHelp(args []string) {
+	if len(args) == 0 {
+		usage()
+		return
+	}
+	if h, ok := helpText[args[0]]; ok {
+		fmt.Fprintln(os.Stderr, h)
+	} else {
+		fmt.Fprintf(os.Stderr, "no help for %q\n", args[0])
+	}
+}
+
 func run() error {
 	if len(os.Args) < 2 {
 		usage()
@@ -45,7 +80,7 @@ func run() error {
 
 	switch os.Args[1] {
 	case "help", "-h", "--help":
-		usage()
+		cmdHelp(os.Args[2:])
 		return nil
 	case "list":
 		return cmdList()
@@ -266,26 +301,56 @@ func cmdStatus() error {
 	fmt.Fprintf(os.Stderr, "db:      %s\n", cfg.DBPath)
 	fmt.Fprintf(os.Stderr, "sync:    %s\n", cfg.SyncDir)
 	fmt.Fprintf(os.Stderr, "host:    %s\n", cfg.Hostname)
-	fmt.Fprintf(os.Stderr, "peers:   ")
+
+	db, err := openDB(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
+	myDir := filepath.Join(cfg.SyncDir, cfg.Hostname)
+	sessions, err := list.Sessions(db)
+	if err != nil {
+		return fmt.Errorf("list sessions: %w", err)
+	}
+
+	var pendingExports int
+	for _, s := range sessions {
+		p := filepath.Join(myDir, s.ID+".json")
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			pendingExports++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "pending:  %d session(s) to export\n", pendingExports)
 
 	entries, err := os.ReadDir(cfg.SyncDir)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "(none)")
+		fmt.Fprintln(os.Stderr, "peers:    (none)")
 	} else {
 		var peers []string
+		var pendingImports int
 		for _, e := range entries {
-			if e.IsDir() && e.Name() != cfg.Hostname {
-				peers = append(peers, e.Name())
+			if !e.IsDir() || e.Name() == cfg.Hostname {
+				continue
+			}
+			peers = append(peers, e.Name())
+			machineDir := filepath.Join(cfg.SyncDir, e.Name())
+			files, _ := os.ReadDir(machineDir)
+			for _, f := range files {
+				if !f.IsDir() && strings.HasSuffix(f.Name(), ".json") {
+					pendingImports++
+				}
 			}
 		}
 		if len(peers) == 0 {
-			fmt.Fprintln(os.Stderr, "(none)")
+			fmt.Fprintln(os.Stderr, "peers:    (none)")
 		} else {
-			fmt.Fprintln(os.Stderr, strings.Join(peers, ", "))
+			fmt.Fprintf(os.Stderr, "peers:    %s\n", strings.Join(peers, ", "))
+			fmt.Fprintf(os.Stderr, "pending:  %d session(s) to import\n", pendingImports)
 		}
 	}
 
-	if cfg.Mappings != nil {
+	if len(cfg.Mappings) > 0 {
 		fmt.Fprintf(os.Stderr, "mappings: %d\n", len(cfg.Mappings))
 	}
 	return nil
@@ -302,5 +367,9 @@ func formatTime(ts int64) string {
 	if ts == 0 {
 		return "-"
 	}
-	return fmt.Sprintf("%d", ts)
+	t := time.UnixMilli(ts)
+	if time.Since(t) < 24*time.Hour {
+		return t.Format("15:04")
+	}
+	return t.Format("Jan 02")
 }
