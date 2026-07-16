@@ -2,7 +2,9 @@ package export
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -46,6 +48,11 @@ func buildExport(db *sql.DB, sessionID string) (*types.SessionExport, error) {
 	if err != nil {
 		return nil, fmt.Errorf("todos: %w", err)
 	}
+	for i := range todos {
+		if todos[i].ID == "" {
+			todos[i].ID = randID()
+		}
+	}
 
 	hostname, _ := os.Hostname()
 
@@ -82,6 +89,7 @@ func writeExport(syncDir string, exp *types.SessionExport) error {
 	f.Close()
 
 	if err := os.Rename(tmpPath, path); err != nil {
+		os.Remove(tmpPath)
 		return fmt.Errorf("rename temp file: %w", err)
 	}
 	return nil
@@ -165,6 +173,12 @@ func queryParts(db *sql.DB, sessionID string) ([]types.Part, error) {
 		parts = append(parts, p)
 	}
 	return parts, rows.Err()
+}
+
+func randID() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 func queryTodos(db *sql.DB, sessionID string) ([]types.Todo, error) {

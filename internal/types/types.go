@@ -37,8 +37,8 @@ type Part struct {
 	Data        string `json:"data"`
 }
 
-// Todo is a todo item associated with a session.
 type Todo struct {
+	ID          string `json:"id"`
 	SessionID   string `json:"session_id"`
 	Content     string `json:"content"`
 	Status      string `json:"status"`

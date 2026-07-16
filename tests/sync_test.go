@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/list"
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS part (
 );
 
 CREATE TABLE IF NOT EXISTS todo (
+	id TEXT PRIMARY KEY,
 	session_id TEXT NOT NULL,
 	content TEXT NOT NULL,
 	status TEXT NOT NULL,
@@ -74,7 +76,6 @@ CREATE TABLE IF NOT EXISTS todo (
 	position INTEGER NOT NULL,
 	time_created INTEGER NOT NULL,
 	time_updated INTEGER NOT NULL,
-	PRIMARY KEY (session_id, position),
 	FOREIGN KEY (session_id) REFERENCES session(id) ON DELETE CASCADE
 );
 `
@@ -195,7 +196,7 @@ func TestImportSession(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	err := importer.Session(dbB, importPath)
+	err := importer.Session(dbB, importPath, nil)
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
@@ -235,10 +236,10 @@ func TestImport_idempotent(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importer.Session(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("first import: %v", err)
 	}
-	if err := importer.Session(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("second import: %v", err)
 	}
 
@@ -262,7 +263,7 @@ func TestImport_globalSession(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_bbb.json")
-	if err := importer.Session(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import global session: %v", err)
 	}
 
@@ -297,7 +298,7 @@ func TestImport_divergentMerge(t *testing.T) {
 
 	// Import into B — B should end up with both A's and B's messages
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importer.Session(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import: %v", err)
 	}
 
@@ -320,11 +321,104 @@ func TestImport_divergentMerge(t *testing.T) {
 	}
 }
 
+func TestImport_withProjectMapping(t *testing.T) {
+	exportDir := tempDir(t)
+	dbA := setupDB(t, seedA)
+	dbB := setupDB(t, seedB)
+
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+
+	mappings := []config.Mapping{{
+		RemoteProjectID: "proj_aaa",
+		RemoteWorktree:  "/home/jd/JDrive/Projects/GO/oc-sync",
+		LocalProjectID:  "proj_bbb",
+		LocalWorktree:   "/home/jd/Work/oc-sync",
+	}}
+
+	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	if err := importer.Session(dbB, importPath, mappings); err != nil {
+		t.Fatalf("import with mapping: %v", err)
+	}
+
+	var projectID string
+	err := dbB.QueryRow("SELECT project_id FROM session WHERE id = 'ses_aaa'").Scan(&projectID)
+	if err != nil {
+		t.Fatalf("query session project_id: %v", err)
+	}
+	if projectID != "proj_bbb" {
+		t.Errorf("want project_id 'proj_bbb', got %q", projectID)
+	}
+
+	var projCount int
+	if err := dbB.QueryRow("SELECT COUNT(*) FROM project WHERE id = 'proj_aaa'").Scan(&projCount); err != nil {
+		t.Fatalf("query project count: %v", err)
+	}
+	if projCount != 0 {
+		t.Errorf("phantom project 'proj_aaa' should not exist, count: %d", projCount)
+	}
+
+	var msgCount int
+	if err := dbB.QueryRow("SELECT COUNT(*) FROM message WHERE session_id = 'ses_aaa'").Scan(&msgCount); err != nil {
+		t.Fatalf("query messages: %v", err)
+	}
+	if msgCount != 2 {
+		t.Errorf("want 2 messages, got %d", msgCount)
+	}
+}
+
+func TestImport_todoMerge(t *testing.T) {
+	exportDir := tempDir(t)
+	dbA := setupDB(t, append(seedA,
+		`INSERT INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
+		 VALUES ('todo_a', 'ses_aaa', 'fix the parser', 'pending', 'high', 0, 1000, 1000)`,
+	))
+	dbB := setupDB(t, append(seedB,
+		`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated)
+		 VALUES ('ses_aaa', 'proj_bbb', 'fix-parser', '/home/jd/Work/oc-sync', 'Fix parser bug', '1', 1000, 1500)`,
+		`INSERT INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
+		 VALUES ('todo_b', 'ses_aaa', 'check edge cases', 'pending', 'medium', 0, 1000, 1000)`,
+	))
+
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+
+	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	if err := importer.Session(dbB, importPath, nil); err != nil {
+		t.Fatalf("import: %v", err)
+	}
+
+	var todoCount int
+	if err := dbB.QueryRow("SELECT COUNT(*) FROM todo WHERE session_id = 'ses_aaa'").Scan(&todoCount); err != nil {
+		t.Fatalf("query todos: %v", err)
+	}
+	if todoCount != 2 {
+		t.Errorf("want 2 todos after merge (one from each machine), got %d", todoCount)
+	}
+
+	var contents []string
+	rows, err := dbB.Query("SELECT content FROM todo WHERE session_id = 'ses_aaa' ORDER BY content")
+	if err != nil {
+		t.Fatalf("query todo contents: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var c string
+		rows.Scan(&c)
+		contents = append(contents, c)
+	}
+	if len(contents) != 2 || contents[0] != "check edge cases" || contents[1] != "fix the parser" {
+		t.Errorf("want both todos, got %v", contents)
+	}
+}
+
 func TestImport_withTodos(t *testing.T) {
 	exportDir := tempDir(t)
 	dbA := setupDB(t, append(seedA,
-		`INSERT INTO todo (session_id, content, status, priority, position, time_created, time_updated)
-		 VALUES ('ses_aaa', 'review the fix', 'pending', 'high', 0, 1000, 1000)`,
+		`INSERT INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
+		 VALUES ('todo_a', 'ses_aaa', 'review the fix', 'pending', 'high', 0, 1000, 1000)`,
 	))
 	dbB := setupDB(t, seedB)
 
@@ -333,7 +427,7 @@ func TestImport_withTodos(t *testing.T) {
 	}
 
 	importPath := filepath.Join(exportDir, "ses_aaa.json")
-	if err := importer.Session(dbB, importPath); err != nil {
+	if err := importer.Session(dbB, importPath, nil); err != nil {
 		t.Fatalf("import: %v", err)
 	}
 

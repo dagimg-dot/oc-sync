@@ -10,8 +10,6 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
@@ -176,7 +174,7 @@ func cmdImport() error {
 				continue
 			}
 			p := filepath.Join(machineDir, f.Name())
-			if err := importer.Session(db, p); err != nil {
+			if err := importer.Session(db, p, cfg.Mappings); err != nil {
 				return fmt.Errorf("import %s: %w", p, err)
 			}
 			imported++
@@ -240,7 +238,7 @@ func cmdSync() error {
 				continue
 			}
 			p := filepath.Join(machineDir, f.Name())
-			if err := importer.Session(dbRW, p); err != nil {
+			if err := importer.Session(dbRW, p, cfg.Mappings); err != nil {
 				fmt.Fprintf(os.Stderr, "warning: import %s: %v\n", p, err)
 				continue
 			}

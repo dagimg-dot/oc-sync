@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
 var bg = context.Background()
 
-func Session(db *sql.DB, src string) error {
+func Session(db *sql.DB, src string, mappings []config.Mapping) error {
 	f, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("open export: %w", err)
@@ -30,7 +31,12 @@ func Session(db *sql.DB, src string) error {
 	}
 	defer tx.Rollback()
 
-	if err := insertProject(tx, &exp.Project); err != nil {
+	remoteProjectID := exp.Project.ID
+	if mapping := lookupMapping(mappings, remoteProjectID); mapping != nil {
+		exp.Session.ProjectID = mapping.LocalProjectID
+		exp.Project.ID = mapping.LocalProjectID
+		exp.Project.Worktree = mapping.LocalWorktree
+	} else if err := insertProject(tx, &exp.Project); err != nil {
 		return fmt.Errorf("project: %w", err)
 	}
 
@@ -61,6 +67,15 @@ func Session(db *sql.DB, src string) error {
 	}
 
 	return tx.Commit()
+}
+
+func lookupMapping(mappings []config.Mapping, remoteProjectID string) *config.Mapping {
+	for i := range mappings {
+		if mappings[i].RemoteProjectID == remoteProjectID {
+			return &mappings[i]
+		}
+	}
+	return nil
 }
 
 func insertProject(tx *sql.Tx, p *types.Project) error {
@@ -105,9 +120,9 @@ func insertPart(tx *sql.Tx, p *types.Part) error {
 
 func insertTodo(tx *sql.Tx, t *types.Todo) error {
 	_, err := tx.ExecContext(bg, `
-		INSERT OR IGNORE INTO todo (session_id, content, status, priority, position, time_created, time_updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
+		INSERT OR IGNORE INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, t.ID, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
 	return err
 }
 
