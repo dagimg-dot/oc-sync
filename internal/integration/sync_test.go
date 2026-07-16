@@ -2,6 +2,7 @@ package integration
 
 import (
 	"database/sql"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -437,5 +438,96 @@ func TestImport_withTodos(t *testing.T) {
 	}
 	if todoCount != 1 {
 		t.Errorf("want 1 todo, got %d", todoCount)
+	}
+}
+
+func TestImport_corruptJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.json")
+	os.WriteFile(path, []byte("{not json"), 0644)
+
+	db := setupDB(t, seedB)
+	err := importer.Session(db, path, nil)
+	if err == nil {
+		t.Fatal("expected error for corrupt JSON")
+	}
+}
+
+func TestExport_nonexistentSession(t *testing.T) {
+	db := setupDB(t, seedA)
+	dir := t.TempDir()
+
+	err := export.Session(db, "nonexistent", dir)
+	if err == nil {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestSync_roundTrip(t *testing.T) {
+	exportDir := t.TempDir()
+	dbA := setupDB(t, seedA)
+	dbB := setupDB(t, seedB)
+
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
+		t.Fatalf("A export: %v", err)
+	}
+
+	importPath := filepath.Join(exportDir, "ses_aaa.json")
+	if err := importer.Session(dbB, importPath, nil); err != nil {
+		t.Fatalf("B import: %v", err)
+	}
+
+	if _, err := dbB.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('msg_c1', 'ses_aaa', 2000, 2000, '{"role":"user"}')`); err != nil {
+		t.Fatalf("B add message: %v", err)
+	}
+
+	exportDir2 := t.TempDir()
+	if err := export.Session(dbB, "ses_aaa", exportDir2); err != nil {
+		t.Fatalf("B export: %v", err)
+	}
+
+	importPath2 := filepath.Join(exportDir2, "ses_aaa.json")
+	if err := importer.Session(dbA, importPath2, nil); err != nil {
+		t.Fatalf("A re-import: %v", err)
+	}
+
+	var msgCount int
+	if err := dbA.QueryRow("SELECT COUNT(*) FROM message WHERE session_id = 'ses_aaa'").Scan(&msgCount); err != nil {
+		t.Fatalf("query messages: %v", err)
+	}
+	if msgCount != 3 {
+		t.Errorf("want 3 messages after round-trip, got %d", msgCount)
+	}
+}
+
+func TestExport_exportFileContent(t *testing.T) {
+	db := setupDB(t, seedA)
+	dir := t.TempDir()
+
+	if err := export.Session(db, "ses_aaa", dir); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "ses_aaa.json"))
+	if err != nil {
+		t.Fatalf("read export: %v", err)
+	}
+
+	var exp types.SessionExport
+	if err := json.Unmarshal(data, &exp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	if exp.Session.Title != "Fix parser bug" {
+		t.Errorf("want title 'Fix parser bug', got %q", exp.Session.Title)
+	}
+	if len(exp.Messages) != 2 {
+		t.Errorf("want 2 messages in export, got %d", len(exp.Messages))
+	}
+	if len(exp.Parts) != 3 {
+		t.Errorf("want 3 parts in export, got %d", len(exp.Parts))
+	}
+	if exp.Version != 1 {
+		t.Errorf("want version 1, got %d", exp.Version)
 	}
 }

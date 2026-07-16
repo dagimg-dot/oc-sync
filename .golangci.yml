@@ -26,6 +26,7 @@ linters:
         linters:
           - unparam
           - unused
+          - noctx
       - path: "internal/integration/"
         linters:
           - noctx
