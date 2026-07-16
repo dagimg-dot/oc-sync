@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/list"
 )
 
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS session (
 	time_updated INTEGER NOT NULL,
 	agent TEXT,
 	model TEXT,
+	path TEXT,
 	cost REAL DEFAULT 0 NOT NULL,
 	tokens_input INTEGER DEFAULT 0 NOT NULL,
 	tokens_output INTEGER DEFAULT 0 NOT NULL,
@@ -154,8 +156,7 @@ func TestExportSession(t *testing.T) {
 	db := setupDB(t, seedA)
 	syncDir := tempDir(t)
 
-	err := exportSession(db, "ses_aaa", syncDir)
-	if err != nil {
+	if err := export.Session(db, "ses_aaa", syncDir); err != nil {
 		t.Fatalf("export session: %v", err)
 	}
 
@@ -163,20 +164,16 @@ func TestExportSession(t *testing.T) {
 	if _, err := os.Stat(exportPath); os.IsNotExist(err) {
 		t.Fatalf("export file not found: %s", exportPath)
 	}
-
-	// TODO: parse JSON and verify contents
 }
 
 func TestExportSession_selectsOnlyRequested(t *testing.T) {
 	db := setupDB(t, seedA)
 	syncDir := tempDir(t)
 
-	err := exportSession(db, "ses_aaa", syncDir)
-	if err != nil {
+	if err := export.Session(db, "ses_aaa", syncDir); err != nil {
 		t.Fatalf("export session: %v", err)
 	}
 
-	// ses_bbb should NOT be exported
 	exportPath := filepath.Join(syncDir, "ses_bbb.json")
 	if _, err := os.Stat(exportPath); !os.IsNotExist(err) {
 		t.Errorf("unwanted export file exists: %s", exportPath)
@@ -189,7 +186,7 @@ func TestImportSession(t *testing.T) {
 	dbA := setupDB(t, seedA)
 	dbB := setupDB(t, seedB) // B has different project ID
 
-	if err := exportSession(dbA, "ses_aaa", exportDir); err != nil {
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
@@ -229,7 +226,7 @@ func TestImport_idempotent(t *testing.T) {
 	dbA := setupDB(t, seedA)
 	dbB := setupDB(t, seedB)
 
-	if err := exportSession(dbA, "ses_aaa", exportDir); err != nil {
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
@@ -256,7 +253,7 @@ func TestImport_globalSession(t *testing.T) {
 	dbA := setupDB(t, seedA)
 	dbB := setupDB(t, seedB)
 
-	if err := exportSession(dbA, "ses_bbb", exportDir); err != nil {
+	if err := export.Session(dbA, "ses_bbb", exportDir); err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
@@ -290,7 +287,7 @@ func TestImport_divergentMerge(t *testing.T) {
 	))
 
 	// Export A's version (has msg_a1, msg_a2 — no msg_b2)
-	if err := exportSession(dbA, "ses_aaa", exportDir); err != nil {
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
@@ -327,7 +324,7 @@ func TestImport_withTodos(t *testing.T) {
 	))
 	dbB := setupDB(t, seedB)
 
-	if err := exportSession(dbA, "ses_aaa", exportDir); err != nil {
+	if err := export.Session(dbA, "ses_aaa", exportDir); err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
@@ -343,10 +340,6 @@ func TestImport_withTodos(t *testing.T) {
 	if todoCount != 1 {
 		t.Errorf("want 1 todo, got %d", todoCount)
 	}
-}
-
-func exportSession(db *sql.DB, sessionID, syncDir string) error {
-	return nil
 }
 
 func importSession(db *sql.DB, src string) error {
