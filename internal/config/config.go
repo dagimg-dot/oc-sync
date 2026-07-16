@@ -6,21 +6,15 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
-type Mapping struct {
-	RemoteHostname  string `yaml:"remote_hostname"`
-	RemoteProjectID string `yaml:"remote_project_id"`
-	RemoteWorktree  string `yaml:"remote_worktree"`
-	LocalWorktree   string `yaml:"local_worktree"`
-	LocalProjectID  string `yaml:"local_project_id"`
-}
-
 type Config struct {
-	DBPath   string    `yaml:"db_path"`
-	SyncDir  string    `yaml:"sync_dir"`
-	Hostname string    `yaml:"hostname"`
-	Mappings []Mapping `yaml:"mappings,omitempty"`
+	DBPath   string          `yaml:"db_path"`
+	SyncDir  string          `yaml:"sync_dir"`
+	Hostname string          `yaml:"hostname"`
+	Mappings []types.Mapping `yaml:"mappings,omitempty"`
 }
 
 func Defaults() *Config {

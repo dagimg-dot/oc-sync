@@ -8,10 +8,10 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/list"
+	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
 // schema is the subset of OpenCode tables needed for sync.
@@ -330,7 +330,7 @@ func TestImport_withProjectMapping(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	mappings := []config.Mapping{{
+	mappings := []types.Mapping{{
 		RemoteProjectID: "proj_aaa",
 		RemoteWorktree:  "/home/jd/JDrive/Projects/GO/oc-sync",
 		LocalProjectID:  "proj_bbb",

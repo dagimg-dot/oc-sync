@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dagimg-dot/oc-sync/internal/config"
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
 var bg = context.Background()
 
-func Session(db *sql.DB, src string, mappings []config.Mapping) error {
+func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 	f, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("open export: %w", err)
@@ -73,7 +72,7 @@ func Session(db *sql.DB, src string, mappings []config.Mapping) error {
 	return tx.Commit()
 }
 
-func lookupMapping(mappings []config.Mapping, remoteProjectID string) *config.Mapping {
+func lookupMapping(mappings []types.Mapping, remoteProjectID string) *types.Mapping {
 	for i := range mappings {
 		if mappings[i].RemoteProjectID == remoteProjectID {
 			return &mappings[i]
