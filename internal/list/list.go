@@ -12,9 +12,10 @@ var bg = context.Background()
 
 func Sessions(db *sql.DB) ([]types.Session, error) {
 	rows, err := db.QueryContext(bg, `
-		SELECT id, project_id, title, agent, model,
+		SELECT id, project_id, title,
+		       COALESCE(agent,''), COALESCE(model,''),
 		       time_created, time_updated,
-		       tokens_input, tokens_output
+		       COALESCE(tokens_input,0), COALESCE(tokens_output,0)
 		FROM session
 		ORDER BY time_updated DESC
 	`)

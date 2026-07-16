@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// Mapping stores a learned path mapping between machines for a project.
 type Mapping struct {
 	RemoteHostname  string `yaml:"remote_hostname"`
 	RemoteProjectID string `yaml:"remote_project_id"`
@@ -15,7 +16,6 @@ type Mapping struct {
 	LocalProjectID  string `yaml:"local_project_id"`
 }
 
-// Config holds all configuration for oc-sync.
 type Config struct {
 	DBPath   string    `yaml:"db_path"`
 	SyncDir  string    `yaml:"sync_dir"`
@@ -23,7 +23,6 @@ type Config struct {
 	Mappings []Mapping `yaml:"mappings,omitempty"`
 }
 
-// Defaults returns a Config with sensible defaults.
 func Defaults() *Config {
 	hostname, _ := os.Hostname()
 	return &Config{
@@ -33,7 +32,6 @@ func Defaults() *Config {
 	}
 }
 
-// ConfigPath returns the default config file location.
 func ConfigPath() string {
 	if p := os.Getenv("OC_SYNC_CONFIG"); p != "" {
 		return p
@@ -41,13 +39,29 @@ func ConfigPath() string {
 	return expandPath("~/.config/oc-sync/config.yaml")
 }
 
-// Load reads config from disk, falling back to defaults.
 func Load() (*Config, error) {
-	return Defaults(), nil
-}
+	cfg := Defaults()
 
-func Save(cfg *Config) error {
-	return fmt.Errorf("not implemented")
+	p := ConfigPath()
+	f, err := os.Open(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
+		return nil, fmt.Errorf("open config: %w", err)
+	}
+	defer f.Close()
+
+	if err := yaml.NewDecoder(f).Decode(cfg); err != nil {
+		return nil, fmt.Errorf("decode config: %w", err)
+	}
+
+	cfg.DBPath = expandPath(cfg.DBPath)
+	cfg.SyncDir = expandPath(cfg.SyncDir)
+	if cfg.Hostname == "" {
+		cfg.Hostname, _ = os.Hostname()
+	}
+	return cfg, nil
 }
 
 func expandPath(p string) string {

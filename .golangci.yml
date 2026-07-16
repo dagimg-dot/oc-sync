@@ -26,6 +26,9 @@ linters:
         linters:
           - unparam
           - unused
+      - path: "tests/"
+        linters:
+          - noctx
 
 formatters:
   enable:
