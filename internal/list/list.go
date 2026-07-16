@@ -8,10 +8,8 @@ import (
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
-var bg = context.Background()
-
 func Sessions(db *sql.DB) ([]types.Session, error) {
-	rows, err := db.QueryContext(bg, `
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT id, project_id, title,
 		       COALESCE(agent,''), COALESCE(model,''),
 		       time_created, time_updated,

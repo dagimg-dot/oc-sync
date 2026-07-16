@@ -10,8 +10,6 @@ import (
 	"github.com/dagimg-dot/oc-sync/internal/types"
 )
 
-var bg = context.Background()
-
 func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 	f, err := os.Open(src)
 	if err != nil {
@@ -28,7 +26,7 @@ func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 		return fmt.Errorf("export version %d is newer than supported version %d", exp.Version, types.ExportVersion)
 	}
 
-	tx, err := db.BeginTx(bg, nil)
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -82,7 +80,7 @@ func lookupMapping(mappings []types.Mapping, remoteProjectID string) *types.Mapp
 }
 
 func insertProject(tx *sql.Tx, p *types.Project) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO project (id, worktree, vcs, name, time_created, time_updated, sandboxes)
 		VALUES (?, ?, ?, ?, ?, ?, '[]')
 	`, p.ID, p.Worktree, p.VCS, p.Name, p.TimeCreated, p.TimeUpdated)
@@ -90,7 +88,7 @@ func insertProject(tx *sql.Tx, p *types.Project) error {
 }
 
 func insertSession(tx *sql.Tx, s *types.Session) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO session
 			(id, project_id, parent_id, slug, directory, path, title, version,
 			 agent, model, cost, tokens_input, tokens_output,
@@ -106,7 +104,7 @@ func insertSession(tx *sql.Tx, s *types.Session) error {
 }
 
 func insertMessage(tx *sql.Tx, m *types.Message) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO message (id, session_id, time_created, time_updated, data)
 		VALUES (?, ?, ?, ?, ?)
 	`, m.ID, m.SessionID, m.TimeCreated, m.TimeUpdated, m.Data)
@@ -114,7 +112,7 @@ func insertMessage(tx *sql.Tx, m *types.Message) error {
 }
 
 func insertPart(tx *sql.Tx, p *types.Part) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO part (id, message_id, session_id, time_created, time_updated, data)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`, p.ID, p.MessageID, p.SessionID, p.TimeCreated, p.TimeUpdated, p.Data)
@@ -122,7 +120,7 @@ func insertPart(tx *sql.Tx, p *types.Part) error {
 }
 
 func insertTodo(tx *sql.Tx, t *types.Todo) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		INSERT OR IGNORE INTO todo (id, session_id, content, status, priority, position, time_created, time_updated)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`, t.ID, t.SessionID, t.Content, t.Status, t.Priority, t.Position, t.TimeCreated, t.TimeUpdated)
@@ -130,7 +128,7 @@ func insertTodo(tx *sql.Tx, t *types.Todo) error {
 }
 
 func recalcTokens(tx *sql.Tx, sessionID string, s *types.Session) error {
-	_, err := tx.ExecContext(bg, `
+	_, err := tx.ExecContext(context.Background(), `
 		UPDATE session SET
 			tokens_input = MAX(tokens_input, ?),
 			tokens_output = MAX(tokens_output, ?),

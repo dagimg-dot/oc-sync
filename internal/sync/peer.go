@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-var bg = context.Background()
-
 type PeerFile struct {
 	Machine string
 	Path    string
@@ -44,7 +42,7 @@ func PeerFiles(syncDir, ownHostname string) ([]PeerFile, error) {
 }
 
 func PendingExports(db *sql.DB, myDir string) (int, error) {
-	rows, err := db.QueryContext(bg, "SELECT id FROM session")
+	rows, err := db.QueryContext(context.Background(), "SELECT id FROM session")
 	if err != nil {
 		return 0, err
 	}
