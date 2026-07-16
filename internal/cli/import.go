@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
+	"github.com/dagimg-dot/oc-sync/internal/db"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ func cmdImport() error {
 		return fmt.Errorf("config: %w", err)
 	}
 
-	db, err := openDBRW(cfg.DBPath)
+	db, err := db.OpenRW(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}

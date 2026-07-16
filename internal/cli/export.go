@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
+	"github.com/dagimg-dot/oc-sync/internal/db"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +33,7 @@ func cmdExport(args []string) error {
 		return fmt.Errorf("config: %w", err)
 	}
 
-	db, err := openDB(cfg.DBPath)
+	db, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}

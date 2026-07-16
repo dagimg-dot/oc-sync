@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
+	"github.com/dagimg-dot/oc-sync/internal/db"
 	"github.com/dagimg-dot/oc-sync/internal/list"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ func cmdList() error {
 		return fmt.Errorf("config: %w", err)
 	}
 
-	db, err := openDB(cfg.DBPath)
+	db, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}

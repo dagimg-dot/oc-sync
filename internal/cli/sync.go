@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
+	"github.com/dagimg-dot/oc-sync/internal/db"
 	"github.com/dagimg-dot/oc-sync/internal/export"
 	"github.com/dagimg-dot/oc-sync/internal/importer"
 	"github.com/dagimg-dot/oc-sync/internal/list"
@@ -31,13 +32,13 @@ func cmdSync() error {
 		return fmt.Errorf("config: %w", err)
 	}
 
-	dbRO, err := openDB(cfg.DBPath)
+	dbRO, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer dbRO.Close()
 
-	dbRW, err := openDBRW(cfg.DBPath)
+	dbRW, err := db.OpenRW(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}

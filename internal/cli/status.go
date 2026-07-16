@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dagimg-dot/oc-sync/internal/config"
+	"github.com/dagimg-dot/oc-sync/internal/db"
 	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,7 @@ func cmdStatus() error {
 	fmt.Fprintf(os.Stderr, "sync:    %s\n", cfg.SyncDir)
 	fmt.Fprintf(os.Stderr, "host:    %s\n", cfg.Hostname)
 
-	db, err := openDB(cfg.DBPath)
+	db, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
