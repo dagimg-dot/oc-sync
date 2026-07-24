@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/dagimg-dot/oc-sync/internal/sync"
 	"github.com/dagimg-dot/oc-sync/internal/types"
@@ -42,6 +43,10 @@ func Session(db *sql.DB, src string, mappings []types.Mapping) error {
 			return fmt.Errorf("project: %w", err)
 		}
 		exp.Session.ProjectID = "global"
+		homeDir, _ := os.UserHomeDir()
+		if homeDir != "" {
+			exp.Session.Directory = homeDir
+		}
 	}
 
 	if err := insertSession(tx, &exp.Session); err != nil {
